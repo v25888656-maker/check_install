@@ -1,66 +1,103 @@
 # =============================================
-# Скрипт для скачивания, распаковки с паролем и открытия файла
+# Installer by v25888656-maker
 # =============================================
 
 param(
-    [string]$Url = "https://raw.githubusercontent.com/v25888656-maker/installer/main/hq.ps1",  # можно поменять
-    [string]$DownloadPath = "$env:TEMP\downloaded_file.zip",
-    [string]$Password = "",           # ← сюда вставь пароль от архива
-    [string]$ExtractTo = "$env:TEMP\extracted",
-    [string]$FileToOpen = ""          # имя файла внутри архива, который нужно открыть (например: "program.exe")
+    [string]$Url = "https://raw.githubusercontent.com/v25888656-maker/installer/main/hq.ps1",  # ← Замени на ссылку на ZIP
+    [string]$Password = "",                                                                    # ← Пароль от архива
+    [string]$FileToOpen = ""                                                                   # ← Имя файла для запуска (например setup.exe)
 )
 
-# Создаём папку для распаковки
-if (!(Test-Path $ExtractTo)) {
-    New-Item -ItemType Directory -Path $ExtractTo -Force | Out-Null
-}
+$DownloadPath = "$env:TEMP\install_download.zip"
+$ExtractPath  = "$env:TEMP\install_extracted"
 
-Write-Host "Скачиваем файл..." -ForegroundColor Cyan
+Write-Host "[+] Создаём папку..." -ForegroundColor Cyan
+New-Item -ItemType Directory -Path $ExtractPath -Force | Out-Null
+
+Write-Host "[+] Скачиваем файл..." -ForegroundColor Cyan
 try {
     Invoke-WebRequest -Uri $Url -OutFile $DownloadPath -UseBasicParsing
-    Write-Host "Файл успешно скачан: $DownloadPath" -ForegroundColor Green
-}
-catch {
-    Write-Host "Ошибка при скачивании: $_" -ForegroundColor Red
+    Write-Host "[+] Скачано успешно" -ForegroundColor Green
+} catch {
+    Write-Host "[-] Ошибка скачивания!" -ForegroundColor Red
     exit 1
 }
 
-# Распаковка с паролем через 7-Zip (самый надёжный способ)
-$7zipPath = "C:\Program Files\7-Zip\7z.exe"
+Write-Host "[+] Распаковываем архив..." -ForegroundColor Cyan
 
-if (!(Test-Path $7zipPath)) {
-    Write-Host "7-Zip не найден! Установи 7-Zip или укажи правильный путь." -ForegroundColor Red
-    exit 1
-}
+# Распаковка через 7-Zip
+$7z = "C:\Program Files\7-Zip\7z.exe"
 
-Write-Host "Распаковываем архив с паролем..." -ForegroundColor Cyan
-
-$arguments = "x `"$DownloadPath`" -o`"$ExtractTo`" -p`"$Password`" -y"
-
-$process = Start-Process -FilePath $7zipPath -ArgumentList $arguments -Wait -PassThru -NoNewWindow
-
-if ($process.ExitCode -eq 0) {
-    Write-Host "Архив успешно распакован!" -ForegroundColor Green
+if (Test-Path $7z) {
+    & $7z x "$DownloadPath" -o"$ExtractPath" -p"$Password" -y -bso0
 } else {
-    Write-Host "Ошибка распаковки. Возможно, неверный пароль." -ForegroundColor Red
+    Write-Host "[-] 7-Zip не найден! Установи 7-Zip." -ForegroundColor Red
     exit 1
 }
 
-# Если указан файл для открытия — открываем его
+# Запуск файла
 if ($FileToOpen) {
-    $fullPath = Join-Path $ExtractTo $FileToOpen
-    
-    if (Test-Path $fullPath) {
-        Write-Host "Открываем файл: $fullPath" -ForegroundColor Green
-        Start-Process $fullPath
+    $FullPath = Join-Path $ExtractPath $FileToOpen
+    if (Test-Path $FullPath) {
+        Write-Host "[+] Запускаем $FileToOpen ..." -ForegroundColor Green
+        Start-Process $FullPath
     } else {
-        Write-Host "Файл $FileToOpen не найден в архиве!" -ForegroundColor Yellow
-        # Открываем папку с распакованным содержимым
-        explorer $ExtractTo
+        Write-Host "[-] Файл $FileToOpen не найден!" -ForegroundColor Yellow
+        explorer $ExtractPath
     }
 } else {
-    # Просто открываем папку
-    explorer $ExtractTo
+    explorer $ExtractPath
 }
 
-Write-Host "Готово!" -ForegroundColor Green
+Write-Host "[+] Готово!" -ForegroundColor Green# =============================================
+# Installer by v25888656-maker
+# =============================================
+
+param(
+    [string]$Url = "https://raw.githubusercontent.com/v25888656-maker/installer/main/hq.ps1",  # ← Замени на ссылку на ZIP
+    [string]$Password = "",                                                                    # ← Пароль от архива
+    [string]$FileToOpen = ""                                                                   # ← Имя файла для запуска (например setup.exe)
+)
+
+$DownloadPath = "$env:TEMP\install_download.zip"
+$ExtractPath  = "$env:TEMP\install_extracted"
+
+Write-Host "[+] Создаём папку..." -ForegroundColor Cyan
+New-Item -ItemType Directory -Path $ExtractPath -Force | Out-Null
+
+Write-Host "[+] Скачиваем файл..." -ForegroundColor Cyan
+try {
+    Invoke-WebRequest -Uri $Url -OutFile $DownloadPath -UseBasicParsing
+    Write-Host "[+] Скачано успешно" -ForegroundColor Green
+} catch {
+    Write-Host "[-] Ошибка скачивания!" -ForegroundColor Red
+    exit 1
+}
+
+Write-Host "[+] Распаковываем архив..." -ForegroundColor Cyan
+
+# Распаковка через 7-Zip
+$7z = "C:\Program Files\7-Zip\7z.exe"
+
+if (Test-Path $7z) {
+    & $7z x "$DownloadPath" -o"$ExtractPath" -p"$Password" -y -bso0
+} else {
+    Write-Host "[-] 7-Zip не найден! Установи 7-Zip." -ForegroundColor Red
+    exit 1
+}
+
+# Запуск файла
+if ($FileToOpen) {
+    $FullPath = Join-Path $ExtractPath $FileToOpen
+    if (Test-Path $FullPath) {
+        Write-Host "[+] Запускаем $FileToOpen ..." -ForegroundColor Green
+        Start-Process $FullPath
+    } else {
+        Write-Host "[-] Файл $FileToOpen не найден!" -ForegroundColor Yellow
+        explorer $ExtractPath
+    }
+} else {
+    explorer $ExtractPath
+}
+
+Write-Host "[+] Готово!" -ForegroundColor Green
